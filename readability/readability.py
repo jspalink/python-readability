@@ -20,10 +20,6 @@ from .htmls import shorten_title
 if sys.version < '3':
     str = unicode
 
-logging.basicConfig(level=logging.INFO)
-log = logging.getLogger()
-
-
 REGEXES = {
     'unlikelyCandidatesRe': re.compile('combx|comment|community|disqus|extra|foot|header|menu|remark|rss|shoutbox|sidebar|sponsor|ad-break|agegate|pagination|pager|popup|tweet|twitter', re.I),
     'okMaybeItsACandidateRe': re.compile('and|article|body|column|main|shadow', re.I),

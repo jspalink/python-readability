@@ -10,8 +10,6 @@ import sys
 if sys.version < '3':
     str = unicode
 
-logging.getLogger().setLevel(logging.DEBUG)
-
 utf8_parser = lxml.html.HTMLParser(encoding='utf-8')
 
 def build_doc(page):
