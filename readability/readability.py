@@ -152,7 +152,7 @@ class Document:
                             html_partial=html_partial)
                 else:
                     if ruthless:
-                        log.debug("ruthless removal did not work. ")
+                        self.debug("ruthless removal did not work. ")
                         ruthless = False
                         self.debug(
                             ("ended up stripping too much - "
@@ -160,7 +160,7 @@ class Document:
                         # try again
                         continue
                     else:
-                        log.debug(
+                        self.debug(
                             ("Ruthless and lenient parsing did not work. "
                              "Returning raw html"))
                         article = self.html.find('body')
@@ -179,7 +179,7 @@ class Document:
                 else:
                     return cleaned_article
         except Exception as e:
-            log.exception('error getting summary: ')
+            logging.exception('error getting summary: ')
             raise Unparseable(str(e))
 
     def get_article(self, candidates, best_candidate, html_partial=False):
@@ -344,7 +344,7 @@ class Document:
 
     def debug(self, *a):
         if self.options.get('debug', False):
-            log.debug(*a)
+            logging.debug(*a)
 
     def remove_unlikely_candidates(self):
         for elem in self.html.iter():
