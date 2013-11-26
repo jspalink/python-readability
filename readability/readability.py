@@ -2,6 +2,7 @@
 import logging
 import re
 import sys
+import chardet
 
 from collections import defaultdict
 from lxml.etree import tostring
@@ -21,10 +22,10 @@ if sys.version < '3':
     str = unicode
 
 REGEXES = {
-    'unlikelyCandidatesRe': re.compile('combx|comment|community|disqus|extra|foot|header|menu|remark|rss|shoutbox|sidebar|sponsor|ad-break|agegate|pagination|pager|popup|tweet|twitter', re.I),
-    'okMaybeItsACandidateRe': re.compile('and|article|body|column|main|shadow', re.I),
+    'unlikelyCandidatesRe': re.compile('combx|comment|community|disclaimer|disqus|extra|foot|header|info|hidden|menu|remark|rss|shoutbox|sidebar|sponsor|ad-break|agegate|pagination|pager|popup|tweet|twitter|video|slideshow', re.I),
+    'okMaybeItsACandidateRe': re.compile('and|article|body|column|content|main|shadow', re.I),
     'positiveRe': re.compile('article|body|content|entry|hentry|main|page|pagination|post|text|blog|story', re.I),
-    'negativeRe': re.compile('combx|comment|com-|contact|foot|footer|footnote|masthead|media|meta|outbrain|promo|related|scroll|shoutbox|sidebar|sponsor|shopping|tags|tool|widget', re.I),
+    'negativeRe': re.compile('caption|combx|comment|com-|contact|disclaimer|legal|foot|footer|footnote|hidden|info|masthead|media|meta|outbrain|promo|related|scroll|shoutbox|sidebar|sponsor|shopping|tags|tool|widget|video|slideshow', re.I),
     'divToPElementsRe': re.compile('<(a|blockquote|dl|div|img|ol|p|pre|table|ul)', re.I),
     #'replaceBrsRe': re.compile('(<br[^>]*>[ \n\r\t]*){2,}',re.I),
     #'replaceFontsRe': re.compile('<(\/?)font[^>]*>',re.I),
@@ -312,14 +313,16 @@ class Document:
         weight = 0
         if e.get('class', None):
             if REGEXES['negativeRe'].search(e.get('class')):
-                weight -= 25
+                self.debug("debiting score for negativeRe in class {}".format(describe(e)))
+                weight -= 35
 
             if REGEXES['positiveRe'].search(e.get('class')):
                 weight += 25
 
         if e.get('id', None):
             if REGEXES['negativeRe'].search(e.get('id')):
-                weight -= 25
+                self.debug("debiting score for negativeRe in id {}".format(describe(e)))
+                weight -= 35
 
             if REGEXES['positiveRe'].search(e.get('id')):
                 weight += 25
@@ -349,6 +352,7 @@ class Document:
     def remove_unlikely_candidates(self):
         for elem in self.html.iter():
             s = "%s %s" % (elem.get('class', ''), elem.get('id', ''))
+            #self.debug("checking : {} - {}".format(type(elem), s))
             if len(s) < 2:
                 continue
             #self.debug(s)

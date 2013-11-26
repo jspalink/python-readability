@@ -15,7 +15,9 @@ def get_encoding(page):
         pass
     res = chardet.detect(text)
     enc = res['encoding']
-    #print '->', enc, "%.2f" % res['confidence']
+    #print('->', enc, "%.2f" % res['confidence'])
     if enc == 'MacCyrillic':
         enc = 'cp1251'
+    if enc == None:
+        enc = "utf-8"
     return enc
