@@ -47,7 +47,7 @@ def norm_title(title):
 
 def get_title(doc):
     title = doc.find('.//title')
-    if title is None or len(title.text) == 0:
+    if title is None or title.text is None or len(title.text) == 0:
         return ''
 
     return norm_title(title.text)
