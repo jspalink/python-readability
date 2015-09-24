@@ -357,8 +357,10 @@ class Document:
     def remove_unlikely_candidates(self):
         for elem in self.html.iter():
             s = "%s %s" % (elem.get('class', ''), elem.get('id', ''))
+            
             styles = elem.get('style', '')
             #self.debug("checking : {} - {}".format(type(elem), s))
+            zlog.debug("checking : {} - {} - {}".format(type(elem), s, style))
             if len(s) < 2:
                 continue
             #self.debug(s)
@@ -366,14 +368,13 @@ class Document:
                 self.debug("Removing unlikely candidate - %s" % describe(elem))
                 zlog.debug("Removing unlikely candidate - %s" % describe(elem))
                 elem.drop_tree()
-                continue
             
             if REGEXES['negativeStyles'].search(styles):
                 self.debug("Removing hidden content - %s" % describe(elem))
                 zlog.debug("Removing hidden content - %s" % describe(elem))
                 elem.drop_tree()
-                continue
-
+    
+    
     def transform_misused_divs_into_paragraphs(self):
         for elem in self.tags(self.html, 'div'):
             # transform <div>s that do not contain other block elements into
