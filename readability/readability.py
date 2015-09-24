@@ -349,7 +349,8 @@ class Document:
         }
 
     def debug(self, *a):
-        if self.options.get('debug', True):
+        self.options['debug'] = True
+        if self.options.get('debug', False):
             logging.debug(*a)
 
     def remove_unlikely_candidates(self):
