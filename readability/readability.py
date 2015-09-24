@@ -360,11 +360,13 @@ class Document:
             #self.debug(s)
             if REGEXES['unlikelyCandidatesRe'].search(s) and (not REGEXES['okMaybeItsACandidateRe'].search(s)) and elem.tag not in ['html', 'body']:
                 self.debug("Removing unlikely candidate - %s" % describe(elem))
+                logging.debug("Removing unlikely content - %s" % describe(elem))
                 elem.drop_tree()
                 continue
             
             if REGEXES['negativeStyles'].search(styles):
                 self.debug("Removing hidden content - %s" % describe(elem))
+                logging.debug("Removing hidden content - %s" % describe(elem))
                 elem.drop_tree()
                 continue
 
