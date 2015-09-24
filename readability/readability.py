@@ -23,8 +23,8 @@ if sys.version < '3':
 
 REGEXES = {
     'unlikelyCandidatesRe': re.compile('combx|comment|community|disclaimer|disqus|extra|foot|header|info|hidden|menu|remark|rss|shoutbox|sidebar|sponsor|ad-break|agegate|pagination|pager|popup|tweet|twitter|video|slideshow|review|warranty|reference|question|qa|cart|hide', re.I),
-    'okMaybeItsACandidateRe': re.compile('and|article|body|column|content|main|shadow', re.I),
-    'positiveRe': re.compile('article|body|content|entry|hentry|main|page|pagination|post|text|blog|story|title|brand|feature|product|long-|highlight|overview|descript|detail|heading|product-about|product-spec', re.I),
+    'okMaybeItsACandidateRe': re.compile('and|article|body|column|content|main|shadow|product|feature|detail', re.I),
+    'positiveRe': re.compile('article|body|content|entry|hentry|main|page|pagination|post|text|blog|story|title|brand|feature|product|long-|highlight|overview|descript|detail|heading|detail|heading', re.I),
     'negativeRe': re.compile('caption|combx|comment|com-|contact|disclaimer|legal|foot|footer|footnote|hidden|hide|info|masthead|media|meta|outbrain|promo|related|scroll|shoutbox|sidebar|sponsor|shopping|tags|tool|widget|video|slideshow|reference|warranty|cart|review|questions|qa', re.I),
     'divToPElementsRe': re.compile('<(a|blockquote|dl|div|img|ol|p|pre|table|ul)', re.I),
     #'replaceBrsRe': re.compile('(<br[^>]*>[ \n\r\t]*){2,}',re.I),
@@ -314,18 +314,18 @@ class Document:
         if e.get('class', None):
             if REGEXES['negativeRe'].search(e.get('class')):
                 self.debug("debiting score for negativeRe in class {}".format(describe(e)))
-                weight -= 35
+                weight -= 35 * len(REGEXES['negativeRe'].findall(e.get('class')))
 
             if REGEXES['positiveRe'].search(e.get('class')):
-                weight += 25
+                weight += 25 * len(REGEXES['positiveRe'].findall(e.get('class')))
 
         if e.get('id', None):
             if REGEXES['negativeRe'].search(e.get('id')):
                 self.debug("debiting score for negativeRe in id {}".format(describe(e)))
-                weight -= 35
+                weight -= 35 * len(REGEXES['negativeRe'].findall(e.get('id')))
 
             if REGEXES['positiveRe'].search(e.get('id')):
-                weight += 25
+                weight += 25 * len(REGEXES['positiveRe'].findall(e.get('id')))
 
         return weight
 
