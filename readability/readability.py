@@ -17,7 +17,7 @@ from .htmls import get_body
 from .htmls import get_title
 from .htmls import shorten_title
 
-mylog = logging.getLogger('readability')
+zlog = logging.getLogger('zenya')
 
 # Python 2.7 compatibility.
 if sys.version < '3':
@@ -317,6 +317,7 @@ class Document:
         if e.get('class', None):
             if REGEXES['negativeRe'].search(e.get('class')):
                 self.debug("debiting score for negativeRe in class {}".format(describe(e)))
+                zlog.debug("debiting score for negativeRe in class {}".format(describe(e)))
                 weight -= 35 * len(REGEXES['negativeRe'].findall(e.get('class')))
 
             if REGEXES['positiveRe'].search(e.get('class')):
@@ -325,6 +326,7 @@ class Document:
         if e.get('id', None):
             if REGEXES['negativeRe'].search(e.get('id')):
                 self.debug("debiting score for negativeRe in id {}".format(describe(e)))
+                zlog.debug("debiting score for negativeRe in id {}".format(describe(e)))
                 weight -= 35 * len(REGEXES['negativeRe'].findall(e.get('id')))
 
             if REGEXES['positiveRe'].search(e.get('id')):
@@ -349,8 +351,6 @@ class Document:
         }
 
     def debug(self, *a):
-        self.options['debug'] = True
-        logging.setLevel(logging.DEBUG)
         if self.options.get('debug', False):
             logging.debug(*a)
 
@@ -364,11 +364,13 @@ class Document:
             #self.debug(s)
             if REGEXES['unlikelyCandidatesRe'].search(s) and (not REGEXES['okMaybeItsACandidateRe'].search(s)) and elem.tag not in ['html', 'body']:
                 self.debug("Removing unlikely candidate - %s" % describe(elem))
+                zlog.debug("Removing unlikely candidate - %s" % describe(elem))
                 elem.drop_tree()
                 continue
             
             if REGEXES['negativeStyles'].search(styles):
                 self.debug("Removing hidden content - %s" % describe(elem))
+                zlog.debug("Removing hidden content - %s" % describe(elem))
                 elem.drop_tree()
                 continue
 
