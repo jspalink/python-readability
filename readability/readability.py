@@ -368,12 +368,12 @@ class Document:
             if REGEXES['unlikelyCandidatesRe'].search(s) and (not REGEXES['okMaybeItsACandidateRe'].search(s)) and elem.tag not in ['html', 'body']:
                 self.debug("Removing unlikely candidate - %s" % describe(elem))
                 zlog.debug("Removing unlikely candidate - %s" % describe(elem))
-                elem.drop_tree()
+                #elem.drop_tree()
             
             if REGEXES['negativeStyles'].search(styles):
                 self.debug("Removing hidden content - %s" % describe(elem))
                 zlog.debug("Removing hidden content - %s" % describe(elem))
-                elem.drop_tree()
+                #elem.drop_tree()
     
     
     def transform_misused_divs_into_paragraphs(self):
