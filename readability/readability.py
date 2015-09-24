@@ -27,6 +27,7 @@ REGEXES = {
     'positiveRe': re.compile('article|body|content|entry|hentry|main|page|pagination|post|text|blog|story|title|brand|feature|product|long|highlight|overview|descript|detail|heading|detail|heading|about|model|description|name|category|detail|spec', re.I),
     'negativeRe': re.compile('caption|combx|comment|com-|contact|disclaimer|legal|foot|footer|footnote|hidden|hide|info|masthead|media|meta|outbrain|promo|related|scroll|shoutbox|sidebar|sponsor|shopping|tags|tool|widget|video|slideshow|reference|warranty|cart|review|questions|qa|legal|ship', re.I),
     'divToPElementsRe': re.compile('<(a|blockquote|dl|div|img|ol|p|pre|table|ul)', re.I),
+    'negativeStyles': re.compile('display:.?none|visibility:.?hidden', re.I)
     #'replaceBrsRe': re.compile('(<br[^>]*>[ \n\r\t]*){2,}',re.I),
     #'replaceFontsRe': re.compile('<(\/?)font[^>]*>',re.I),
     #'trimRe': re.compile('^\s+|\s+$/'),
@@ -352,6 +353,7 @@ class Document:
     def remove_unlikely_candidates(self):
         for elem in self.html.iter():
             s = "%s %s" % (elem.get('class', ''), elem.get('id', ''))
+            styles = elem.get('style', '')
             #self.debug("checking : {} - {}".format(type(elem), s))
             if len(s) < 2:
                 continue
@@ -359,6 +361,12 @@ class Document:
             if REGEXES['unlikelyCandidatesRe'].search(s) and (not REGEXES['okMaybeItsACandidateRe'].search(s)) and elem.tag not in ['html', 'body']:
                 self.debug("Removing unlikely candidate - %s" % describe(elem))
                 elem.drop_tree()
+                continue
+            
+            if REGEXES['negativeStyles'].search(styles):
+                self.debug("Removing hidden content - %s" % describe(elem))
+                elem.drop_tree()
+                continue
 
     def transform_misused_divs_into_paragraphs(self):
         for elem in self.tags(self.html, 'div'):
