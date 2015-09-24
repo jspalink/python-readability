@@ -359,8 +359,9 @@ class Document:
             s = "%s %s" % (elem.get('class', ''), elem.get('id', ''))
             
             styles = elem.get('style', '')
+            
             #self.debug("checking : {} - {}".format(type(elem), s))
-            zlog.debug("checking : {} - {} - {}".format(type(elem), s, style))
+            zlog.debug("checking : {} - {} - {}".format(type(elem), s, styles))
             if len(s) < 2:
                 continue
             #self.debug(s)
