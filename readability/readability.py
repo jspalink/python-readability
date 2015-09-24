@@ -17,6 +17,8 @@ from .htmls import get_body
 from .htmls import get_title
 from .htmls import shorten_title
 
+mylog = logging.getLogger('readability')
+
 # Python 2.7 compatibility.
 if sys.version < '3':
     str = unicode
@@ -347,7 +349,7 @@ class Document:
         }
 
     def debug(self, *a):
-        if self.options.get('debug', False):
+        if self.options.get('debug', True):
             logging.debug(*a)
 
     def remove_unlikely_candidates(self):
@@ -360,13 +362,11 @@ class Document:
             #self.debug(s)
             if REGEXES['unlikelyCandidatesRe'].search(s) and (not REGEXES['okMaybeItsACandidateRe'].search(s)) and elem.tag not in ['html', 'body']:
                 self.debug("Removing unlikely candidate - %s" % describe(elem))
-                logging.debug("Removing unlikely content - %s" % describe(elem))
                 elem.drop_tree()
                 continue
             
             if REGEXES['negativeStyles'].search(styles):
                 self.debug("Removing hidden content - %s" % describe(elem))
-                logging.debug("Removing hidden content - %s" % describe(elem))
                 elem.drop_tree()
                 continue
 
