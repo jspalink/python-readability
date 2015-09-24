@@ -25,7 +25,7 @@ REGEXES = {
     'unlikelyCandidatesRe': re.compile('combx|comment|community|disclaimer|disqus|extra|foot|header|info|hidden|menu|remark|review|rss|shoutbox|sidebar|sponsor|ad-break|agegate|pagination|pager|popup|tweet|twitter|video|slideshow|review|warranty|reference|question|qa|cart|hide', re.I),
     'okMaybeItsACandidateRe': re.compile('and|article|body|column|content|main|shadow|product|feature|detail|spec', re.I),
     'positiveRe': re.compile('article|body|content|entry|hentry|main|page|pagination|post|text|blog|story|title|brand|feature|product|long|highlight|overview|descript|detail|heading|detail|heading|about|model|description|name|category|detail|spec', re.I),
-    'negativeRe': re.compile('caption|combx|comment|com-|contact|disclaimer|legal|foot|footer|footnote|hidden|hide|info|masthead|media|meta|outbrain|promo|related|scroll|shoutbox|sidebar|sponsor|shopping|tags|tool|widget|video|slideshow|reference|warranty|cart|review|questions|qa|legal|ship', re.I),
+    'negativeRe': re.compile('caption|combx|comment|com-|contact|disclaimer|legal|foot|footer|footnote|hidden|hide|info|masthead|media|meta|outbrain|promo|related|scroll|shoutbox|sidebar|sponsor|shopping|tags|tool|widget|video|slideshow|reference|warranty|cart|review|questions|qa|legal|ship|gift|popup|services', re.I),
     'divToPElementsRe': re.compile('<(a|blockquote|dl|div|img|ol|p|pre|table|ul)', re.I),
     'negativeStyles': re.compile('display:.?none|visibility:.?hidden', re.I)
     #'replaceBrsRe': re.compile('(<br[^>]*>[ \n\r\t]*){2,}',re.I),
