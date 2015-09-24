@@ -350,6 +350,7 @@ class Document:
 
     def debug(self, *a):
         self.options['debug'] = True
+        logging.setLevel(logging.DEBUG)
         if self.options.get('debug', False):
             logging.debug(*a)
 
