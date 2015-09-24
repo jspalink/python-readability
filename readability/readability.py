@@ -52,6 +52,8 @@ def describe(node, depth=1):
         name += '#' + node.get('id')
     if node.get('class', ''):
         name += '.' + node.get('class').replace(' ', '.')
+    if node.get('style', ''):
+        name += ' (style=%s)' % node.get('style')
     if name[:4] in ['div#', 'div.']:
         name = name[3:]
     if depth and node.getparent() is not None:
@@ -317,7 +319,6 @@ class Document:
         if e.get('class', None):
             if REGEXES['negativeRe'].search(e.get('class')):
                 self.debug("debiting score for negativeRe in class {}".format(describe(e)))
-                zlog.debug("debiting score for negativeRe in class {}".format(describe(e)))
                 weight -= 35 * len(REGEXES['negativeRe'].findall(e.get('class')))
 
             if REGEXES['positiveRe'].search(e.get('class')):
@@ -326,7 +327,6 @@ class Document:
         if e.get('id', None):
             if REGEXES['negativeRe'].search(e.get('id')):
                 self.debug("debiting score for negativeRe in id {}".format(describe(e)))
-                zlog.debug("debiting score for negativeRe in id {}".format(describe(e)))
                 weight -= 35 * len(REGEXES['negativeRe'].findall(e.get('id')))
 
             if REGEXES['positiveRe'].search(e.get('id')):
@@ -355,26 +355,31 @@ class Document:
             logging.debug(*a)
 
     def remove_unlikely_candidates(self):
+        itemstodrop = []
+        # bad form to edit inside an interable so add to a list, and then drop
+        # after
         for elem in self.html.iter():
             s = "%s %s" % (elem.get('class', ''), elem.get('id', ''))
-            
             styles = elem.get('style', '')
             
-            #self.debug("checking : {} - {}".format(type(elem), s))
-            zlog.debug("checking : {} - {} - {}".format(type(elem), s, styles))
+            self.debug("checking : {} - {} - {}".format(type(elem), s, styles))
+            
             if len(s) < 2:
                 continue
             #self.debug(s)
             if REGEXES['unlikelyCandidatesRe'].search(s) and (not REGEXES['okMaybeItsACandidateRe'].search(s)) and elem.tag not in ['html', 'body']:
                 self.debug("Removing unlikely candidate - %s" % describe(elem))
                 zlog.debug("Removing unlikely candidate - %s" % describe(elem))
-                #elem.drop_tree()
+                itemstodrop.append(elem)
+                
             
-            if REGEXES['negativeStyles'].search(styles):
+            elif REGEXES['negativeStyles'].search(styles):
                 self.debug("Removing hidden content - %s" % describe(elem))
                 zlog.debug("Removing hidden content - %s" % describe(elem))
-                #elem.drop_tree()
-    
+                itemstodrop.append(elem)
+                
+        for elem in itemstodrop:
+            elem.drop_tree()
     
     def transform_misused_divs_into_paragraphs(self):
         for elem in self.tags(self.html, 'div'):
@@ -589,7 +594,8 @@ def main():
     parser.add_option('-v', '--verbose', action='store_true')
     parser.add_option('-u', '--url', default=None, help="use URL instead of a local file")
     (options, args) = parser.parse_args()
-
+    zlog.setLevel(logging.DEBUG)
+    
     if not (len(args) == 1 or options.url):
         parser.print_help()
         sys.exit(1)
