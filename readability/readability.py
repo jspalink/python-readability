@@ -24,10 +24,10 @@ if sys.version < '3':
     str = unicode
 
 REGEXES = {
-    'unlikelyCandidatesRe': re.compile('combx|comment|community|disclaimer|disqus|extra|foot|header|info|hidden|menu|remark|review|rss|shoutbox|sidebar|sponsor|ad-break|agegate|pagination|pager|popup|tweet|twitter|video|slideshow|review|warranty|reference|question|qa|cart|hide', re.I),
-    'okMaybeItsACandidateRe': re.compile('and|article|body|column|content|main|shadow|product|feature|detail|spec', re.I),
-    'positiveRe': re.compile('article|body|content|entry|hentry|main|page|pagination|post|text|blog|story|title|brand|feature|product|long|highlight|overview|descript|detail|heading|detail|heading|about|model|description|name|category|detail|spec', re.I),
-    'negativeRe': re.compile('caption|combx|comment|com-|contact|disclaimer|legal|foot|footer|footnote|hidden|hide|info|masthead|media|meta|outbrain|promo|related|scroll|shoutbox|sidebar|sponsor|shopping|tags|tool|widget|video|slideshow|reference|warranty|cart|review|questions|qa|legal|ship|gift|popup|services', re.I),
+    'unlikelyCandidatesRe': re.compile('ad-break|agegate|cart|combx|comment|community|disclaimer|disqus|extra|foot|header|hidden|legal|menu|modal|nav|pager|pagination|polic|popup|reference|remark|review|rss|shoutbox|sidebar|slideshow|sponsor|toc|tweet|twitter|video|warranty', re.I),
+    'okMaybeItsACandidateRe': re.compile('econtextmax|and|article|body|column|main|shadow|product|feature|detail|spec|about', re.I),
+    'positiveRe': re.compile('econtextmax|and|article|body|column|content|main|shadow|product|feature|detail|spec|about|itemprop', re.I),
+    'negativeRe': re.compile('ad|ad-break|agegate|cart|citation|combx|comment|community|disclaimer|disqus|extra|feedback|foot|form|fulfillment|header|hidden|legal|menu|modal|nav|pager|pagination|placeholder|polic|popup|qa|question|reference|remark|review|rss|shoutbox|sidebar|slideshow|small|sponsor|toc|tweet|twitter|video|warranty', re.I),
     'divToPElementsRe': re.compile('<(a|blockquote|dl|div|img|ol|p|pre|table|ul)', re.I),
     'negativeStyles': re.compile('display:.?none|visibility:.?hidden', re.I)
     #'replaceBrsRe': re.compile('(<br[^>]*>[ \n\r\t]*){2,}',re.I),
@@ -52,14 +52,25 @@ def describe(node, depth=1):
         name += '#' + node.get('id')
     if node.get('class', ''):
         name += '.' + node.get('class').replace(' ', '.')
-    if node.get('style', ''):
-        name += ' (style=%s)' % node.get('style')
     if name[:4] in ['div#', 'div.']:
         name = name[3:]
     if depth and node.getparent() is not None:
         return name + ' - ' + describe(node.getparent(), depth - 1)
     return name
 
+def describe(node, depth=1):
+    """
+    Describe a node by using its XPATH and its id attribute, or class attribute
+    """
+    if not hasattr(node, 'tag'):
+        return "[%s]" % type(node)
+    name = node.tag
+    if node.get('id', ''):
+        name += '#' + node.get('id')
+    if node.get('class', ''):
+        name += '.' + node.get('class').replace(' ', '.')
+    name = "{} {}".format(node.getroottree().getpath(node), name)
+    return name
 
 def to_int(x):
     if not x:
@@ -86,7 +97,11 @@ class Document:
     """Class to build a etree document out of html."""
     TEXT_LENGTH_THRESHOLD = 25
     RETRY_LENGTH = 250
-
+    
+    METAPROPS = ['description', 'title', 'keywords', 'og:title', 'og:description', 'twitter:description', 'twitter:title']
+    ITEMPROPS = ['model', 'brand', 'description', 'name']
+    BADTAGS = ['nav', 'footer', 'header', 'aside']
+    
     def __init__(self, input, **options):
         """Generate the document
 
@@ -102,13 +117,17 @@ class Document:
         """
         self.input = input
         self.options = options
+        self.domain = self.options.get('domain', None)
         self.html = None
-
+        self.metaTags = None
+    
     def _html(self, force=False):
         if force or self.html is None:
             self.html = self._parse(self.input)
+        if self.metaTags is None:
+            self.metaTags = self.collectMetaTags()
         return self.html
-
+    
     def _parse(self, input):
         doc = build_doc(input)
         doc = html_cleaner.clean_html(doc)
@@ -118,19 +137,82 @@ class Document:
         else:
             doc.resolve_base_href()
         return doc
-
+    
     def content(self):
         return get_body(self._html(True))
-
+    
     def title(self):
         return get_title(self._html(True))
-
+    
     def short_title(self):
         return shorten_title(self._html(True))
-
+    
     def get_clean_html(self):
          return clean_attributes(tounicode(self.html))
-
+    
+    def strip(self, text, strip=None):
+        """
+        Remove this content from the beginning or end of a string (eg. amazon.com)
+        """
+        if strip is not None and text is not None:
+            strip_len = len(strip)
+            if text.lower().startswith(strip):
+                text = text[strip_len:]
+            if text.lower().endswith(strip):
+                text = text[:len(text) - strip_len]
+        return text
+        
+    def collectMetaTags(self):
+        metaDiv = fragment_fromstring('<div id="meta product content descriptions"/>')
+        dedupe = {}
+        self.addMeta(dedupe, metaDiv)
+        self.addProps(dedupe, metaDiv)
+        return metaDiv
+    
+    
+    def _addMetaTags(self, metaTags, base=None):
+        """
+        Adds a set of tags into the base element
+        """
+        if base is None:
+            self.html.find(".//body").insert(0, metaTags)
+        else:
+            base.insert(0, metaTags)
+        return base
+    
+    def addMeta(self, dedupe, base=None):
+        """
+        Add meta tags as paragraph in the body, if they exist.
+        """
+        if base is None:
+            base = self.html.find(".//body")
+        for elem in self.html.xpath(".//meta"):
+            prop = elem.attrib.get('name', elem.attrib.get('property', None))
+            if prop in self.METAPROPS:
+                metacontent = self.strip(elem.attrib.get('content'), self.domain)
+                if dedupe.get(prop[prop.find(':')+1:]) != metacontent:
+                    meta = fragment_fromstring('<p class="econtextmax meta {}">{}</p>'.format(prop, metacontent))
+                    base.insert(0, meta)
+                    zlog.debug(" ** Found meta: {}".format(tounicode(meta)))
+                dedupe[prop[prop.find(':')+1:]] = metacontent
+        return self
+    
+    def addProps(self, dedupe, base=None):
+        """
+        Adds microdata items as paragraphs in the body, if they exist
+        """
+        if base is None:
+            base = self.html.find(".//body")
+        for elem in self.html.xpath(".//*[@itemprop]"):
+            if elem.attrib.get('itemprop') in self.ITEMPROPS:
+                metacontent = elem.attrib.get('content', elem.text_content().strip())
+                if dedupe.get(elem.attrib.get('itemprop')) != metacontent:
+                    meta = fragment_fromstring('<p class="econtextmax itemprop {}">{}</p>'.format(elem.attrib.get('itemprop'), metacontent))
+                    base.insert(0, meta)
+                    zlog.debug(" ** Found microdata: {}".format(tounicode(meta)))
+                dedupe[elem.attrib.get('itemprop')] = metacontent
+        return self
+    
     def summary(self, html_partial=False):
         """Generate the summary of the html docuemnt
 
@@ -142,8 +224,12 @@ class Document:
             ruthless = True
             while True:
                 self._html(True)
+                to_drop = []
                 for i in self.tags(self.html, 'script', 'style'):
+                    to_drop.append(i)
+                for i in to_drop:
                     i.drop_tree()
+                
                 for i in self.tags(self.html, 'body'):
                     i.set('id', 'readabilityBody')
                 if ruthless:
@@ -154,47 +240,43 @@ class Document:
                 best_candidate = self.select_best_candidate(candidates)
 
                 if best_candidate:
-                    article = self.get_article(candidates, best_candidate,
-                            html_partial=html_partial)
+                    article = self.get_article(candidates, best_candidate, html_partial=html_partial)
                 else:
                     if ruthless:
-                        self.debug("ruthless removal did not work. ")
+                        zlog.debug("ruthless removal did not work. ")
                         ruthless = False
-                        self.debug(
-                            ("ended up stripping too much - "
-                             "going for a safer _parse"))
+                        zlog.debug("ended up stripping too much - going for a safer _parse")
                         # try again
                         continue
                     else:
-                        self.debug(
-                            ("Ruthless and lenient parsing did not work. "
-                             "Returning raw html"))
+                        zlog.debug("Ruthless and lenient parsing did not work. Returning raw html")
                         article = self.html.find('body')
                         if article is None:
                             article = self.html
+                
                 cleaned_article = self.sanitize(article, candidates)
                 article_length = len(cleaned_article or '')
-                retry_length = self.options.get(
-                    'retry_length',
-                    self.RETRY_LENGTH)
+                retry_length = self.options.get('retry_length', self.RETRY_LENGTH)
                 of_acceptable_length = article_length >= retry_length
                 if ruthless and not of_acceptable_length:
                     ruthless = False
                     # Loop through and try again.
                     continue
                 else:
-                    return cleaned_article
+                    break
         except Exception as e:
             logging.exception('error getting summary: ')
             raise Unparseable(str(e))
-
+        
+        # return here
+        self._addMetaTags(self.metaTags)
+        return self.get_clean_html()
+    
     def get_article(self, candidates, best_candidate, html_partial=False):
         # Now that we have the top candidate, look through its siblings for
         # content that might also be related.
         # Things like preambles, content split by ads that we removed, etc.
-        sibling_score_threshold = max([
-            10,
-            best_candidate['content_score'] * 0.2])
+        sibling_score_threshold = max([10, best_candidate['content_score'] * 0.2])
         # create a new html document with a html->body->div
         if html_partial:
             output = fragment_fromstring('<div/>')
@@ -234,21 +316,19 @@ class Document:
         #if output is not None:
         #    output.append(best_elem)
         return output
-
+    
     def select_best_candidate(self, candidates):
         sorted_candidates = sorted(list(candidates.values()), key=lambda x: x['content_score'], reverse=True)
         for candidate in sorted_candidates[:5]:
             elem = candidate['elem']
-            self.debug("Top 5 : %6.3f %s" % (
-                candidate['content_score'],
-                describe(elem)))
+            zlog.debug("Top 5 : %6.3f %s" % (candidate['content_score'], describe(elem)))
 
         if len(sorted_candidates) == 0:
             return None
 
         best_candidate = sorted_candidates[0]
         return best_candidate
-
+    
     def get_link_density(self, elem):
         link_length = 0
         for i in elem.findall(".//a"):
@@ -257,11 +337,9 @@ class Document:
         #    link_length = link_length
         total_length = text_length(elem)
         return float(link_length) / max(total_length, 1)
-
+    
     def score_paragraphs(self, ):
-        MIN_LEN = self.options.get(
-            'min_text_length',
-            self.TEXT_LENGTH_THRESHOLD)
+        MIN_LEN = self.options.get('min_text_length', self.TEXT_LENGTH_THRESHOLD)
         candidates = {}
         ordered = []
         for elem in self.tags(self._html(), "p", "pre", "td"):
@@ -305,20 +383,16 @@ class Document:
             candidate = candidates[elem]
             ld = self.get_link_density(elem)
             score = candidate['content_score']
-            self.debug("Candid: %6.3f %s link density %.3f -> %6.3f" % (
-                score,
-                describe(elem),
-                ld,
-                score * (1 - ld)))
+            zlog.debug("Candid: %6.3f %s link density %.3f -> %6.3f" % (score, describe(elem), ld, score * (1 - ld)))
             candidate['content_score'] *= (1 - ld)
 
         return candidates
-
+    
     def class_weight(self, e):
         weight = 0
         if e.get('class', None):
             if REGEXES['negativeRe'].search(e.get('class')):
-                self.debug("debiting score for negativeRe in class {}".format(describe(e)))
+                zlog.debug("debiting score for negativeRe in class {}".format(describe(e)))
                 weight -= 35 * len(REGEXES['negativeRe'].findall(e.get('class')))
 
             if REGEXES['positiveRe'].search(e.get('class')):
@@ -326,14 +400,14 @@ class Document:
 
         if e.get('id', None):
             if REGEXES['negativeRe'].search(e.get('id')):
-                self.debug("debiting score for negativeRe in id {}".format(describe(e)))
+                zlog.debug("debiting score for negativeRe in id {}".format(describe(e)))
                 weight -= 35 * len(REGEXES['negativeRe'].findall(e.get('id')))
 
             if REGEXES['positiveRe'].search(e.get('id')):
                 weight += 25 * len(REGEXES['positiveRe'].findall(e.get('id')))
 
         return weight
-
+    
     def score_node(self, elem):
         content_score = self.class_weight(elem)
         name = elem.tag.lower()
@@ -349,37 +423,33 @@ class Document:
             'content_score': content_score,
             'elem': elem
         }
-
+    
     def debug(self, *a):
         if self.options.get('debug', False):
             logging.debug(*a)
-
+    
     def remove_unlikely_candidates(self):
-        itemstodrop = []
-        # bad form to edit inside an interable so add to a list, and then drop
-        # after
+        to_remove = []
         for elem in self.html.iter():
             s = "%s %s" % (elem.get('class', ''), elem.get('id', ''))
             styles = elem.get('style', '')
             
-            self.debug("checking : {} - {} - {}".format(type(elem), s, styles))
-            
+            zlog.debug("checking : {} - {} - {}".format(type(elem), s, styles))
             if len(s) < 2:
                 continue
-            #self.debug(s)
-            if REGEXES['unlikelyCandidatesRe'].search(s) and (not REGEXES['okMaybeItsACandidateRe'].search(s)) and elem.tag not in ['html', 'body']:
-                self.debug("Removing unlikely candidate - %s" % describe(elem))
-                zlog.debug("Removing unlikely candidate - %s" % describe(elem))
-                itemstodrop.append(elem)
-                
             
-            elif REGEXES['negativeStyles'].search(styles):
-                self.debug("Removing hidden content - %s" % describe(elem))
+            if REGEXES['unlikelyCandidatesRe'].search(s) and (not REGEXES['okMaybeItsACandidateRe'].search(s)) and elem.tag not in ['html', 'body']:
+                zlog.debug("Removing unlikely candidate - %s" % describe(elem))
+                to_remove.append(elem)
+                continue
+            
+            if REGEXES['negativeStyles'].search(styles):
                 zlog.debug("Removing hidden content - %s" % describe(elem))
-                itemstodrop.append(elem)
-                
-        for elem in itemstodrop:
-            elem.drop_tree()
+                to_remove.append(elem)
+                continue
+        
+        for elem in to_remove:
+                elem.drop_tree()
     
     def transform_misused_divs_into_paragraphs(self):
         for elem in self.tags(self.html, 'div'):
@@ -403,6 +473,7 @@ class Document:
                 elem.insert(0, p)
                 #print "Appended "+tounicode(p)+" to "+describe(elem)
 
+            to_drop = []
             for pos, child in reversed(list(enumerate(elem))):
                 if child.tail and child.tail.strip():
                     p = fragment_fromstring('<p/>')
@@ -412,29 +483,36 @@ class Document:
                     #print "Inserted "+tounicode(p)+" to "+describe(elem)
                 if child.tag == 'br':
                     #print 'Dropped <br> at '+describe(elem)
-                    child.drop_tree()
-
+                    to_drop.append(child)
+            for d in to_drop:
+                d.drop_tree()
+    
     def tags(self, node, *tag_names):
         for tag_name in tag_names:
             for e in node.findall('.//%s' % tag_name):
                 yield e
-
+    
     def reverse_tags(self, node, *tag_names):
         for tag_name in tag_names:
             for e in reversed(node.findall('.//%s' % tag_name)):
                 yield e
-
+    
     def sanitize(self, node, candidates):
-        MIN_LEN = self.options.get('min_text_length',
-            self.TEXT_LENGTH_THRESHOLD)
+        MIN_LEN = self.options.get('min_text_length', self.TEXT_LENGTH_THRESHOLD)
+        to_drop = []
         for header in self.tags(node, "h1", "h2", "h3", "h4", "h5", "h6"):
             if self.class_weight(header) < 0 or self.get_link_density(header) > 0.33:
-                header.drop_tree()
+                to_drop.append(header)
 
         for elem in self.tags(node, "form", "iframe", "textarea"):
+            to_drop.append(elem)
+        
+        for elem in to_drop:
             elem.drop_tree()
+        
         allowed = {}
         # Conditionally clean <table>s, <ul>s, and <div>s
+        to_drop = []
         for el in self.reverse_tags(node, "table", "ul", "div"):
             if el in allowed:
                 continue
@@ -447,9 +525,10 @@ class Document:
             tag = el.tag
 
             if weight + content_score < 0:
-                self.debug("Cleaned %s with score %6.3f and weight %-3s" %
-                    (describe(el), content_score, weight, ))
+                zlog.debug("Cleaned %s with score %6.3f and weight %-3s" % (describe(el), content_score, weight, ))
                 el.drop_tree()
+                continue
+            
             elif el.text_content().count(",") < 10:
                 counts = {}
                 for kind in ['p', 'img', 'li', 'a', 'embed', 'input']:
@@ -541,22 +620,31 @@ class Document:
                     #self.debug(str(siblings))
                     if siblings and sum(siblings) > 1000:
                         to_remove = False
-                        self.debug("Allowing %s" % describe(el))
+                        zlog.debug("Allowing %s" % describe(el))
                         for desnode in self.tags(el, "table", "ul", "div"):
                             allowed[desnode] = True
 
                 if to_remove:
-                    self.debug("Cleaned %6.3f %s with weight %s cause it has %s." %
-                        (content_score, describe(el), weight, reason))
+                    zlog.debug("Cleaned %6.3f %s with weight %s cause it has %s." % (content_score, describe(el), weight, reason))
                     #print tounicode(el)
                     #self.debug("pname %s pweight %.3f" %(pname, pweight))
                     el.drop_tree()
-
+                    continue
+        
+        ## Remove empty tags
+        for el in self.reverse_tags(node, "*"):
+            if el.text_content().strip() == '':
+                el.drop_tree()
+        
+        for el in to_drop:
+            if el.getparent() is not None:
+                el.drop_tree()
+        
         for el in ([node] + [n for n in node.iter()]):
             if not self.options.get('attributes', None):
                 #el.attrib = {} #FIXME:Checkout the effects of disabling this
                 pass
-
+        
         self.html = node
         return self.get_clean_html()
 
@@ -594,11 +682,15 @@ def main():
     parser.add_option('-v', '--verbose', action='store_true')
     parser.add_option('-u', '--url', default=None, help="use URL instead of a local file")
     (options, args) = parser.parse_args()
-    zlog.setLevel(logging.DEBUG)
-    
+
     if not (len(args) == 1 or options.url):
         parser.print_help()
         sys.exit(1)
+    
+    if options.verbose:
+        zlog.addHandler(logging.StreamHandler())
+        zlog.setLevel(logging.DEBUG)
+        zlog.debug("DEBUG turned on")
 
     file = None
     if options.url:
@@ -613,9 +705,8 @@ def main():
         file = open(args[0], 'rt')
     enc = sys.__stdout__.encoding or 'utf-8'
     try:
-        print(Document(file.read(),
-            debug=options.verbose,
-            url=options.url).summary().encode(enc, 'replace'))
+        doc = Document(file.read(), debug=options.verbose, url=options.url).summary()
+        print(doc)
     finally:
         file.close()
 
