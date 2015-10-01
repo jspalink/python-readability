@@ -175,9 +175,10 @@ class Document:
         Adds a set of tags into the base element
         """
         if base is None:
-            self.html.find(".//body").insert(0, metaTags)
-        else:
-            base.insert(0, metaTags)
+            base = self.html.find(".//body")
+        if base is None:
+            base = self.html
+        base.insert(0, metaTags)
         return base
     
     def addMeta(self, dedupe, base=None):
