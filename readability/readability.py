@@ -192,7 +192,10 @@ class Document:
             if prop in self.METAPROPS:
                 metacontent = self.strip(elem.attrib.get('content'), self.domain)
                 if dedupe.get(prop[prop.find(':')+1:]) != metacontent:
-                    meta = fragment_fromstring('<p class="econtextmax meta {}">{}</p>'.format(prop, metacontent))
+                    try:
+                        meta = fragment_fromstring('<p class="econtextmax meta {}">{}</p>'.format(prop, re.sub("<.*?>", '', metacontent)))
+                    except:
+                        zlog.debug("metacontent {}: {}".format(prop, metacontent))
                     base.insert(0, meta)
                     zlog.debug(" ** Found meta: {}".format(tounicode(meta)))
                 dedupe[prop[prop.find(':')+1:]] = metacontent
@@ -208,7 +211,7 @@ class Document:
             if elem.attrib.get('itemprop') in self.ITEMPROPS:
                 metacontent = elem.attrib.get('content', elem.text_content().strip())
                 if dedupe.get(elem.attrib.get('itemprop')) != metacontent:
-                    meta = fragment_fromstring('<p class="econtextmax itemprop {}">{}</p>'.format(elem.attrib.get('itemprop'), metacontent))
+                    meta = fragment_fromstring('<p class="econtextmax itemprop {}">{}</p>'.format(elem.attrib.get('itemprop'), re.sub("<.*?>", '', metacontent)))
                     base.insert(0, meta)
                     zlog.debug(" ** Found microdata: {}".format(tounicode(meta)))
                 dedupe[elem.attrib.get('itemprop')] = metacontent
