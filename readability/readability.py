@@ -25,7 +25,7 @@ if sys.version < '3':
 
 REGEXES = {
     'unlikelyCandidatesRe': re.compile('ad-break|agegate|cart|combx|comment|community|disclaimer|disqus|extra|foot|header|hidden|legal|menu|modal|nav|pager|pagination|polic|popup|reference|remark|review|rss|shoutbox|sidebar|slideshow|sponsor|toc|tweet|twitter|video|warranty', re.I),
-    'okMaybeItsACandidateRe': re.compile('econtextmax|and|article|body|column|main|shadow|product|feature|detail|spec|about', re.I),
+    'okMaybeItsACandidateRe': re.compile('econtextmax|and|article|body|column|content|main|shadow|product|feature|detail|spec|about', re.I),
     'positiveRe': re.compile('econtextmax|and|article|body|column|content|main|shadow|product|feature|detail|spec|about|itemprop', re.I),
     'negativeRe': re.compile('ad|ad-break|agegate|cart|citation|combx|comment|community|disclaimer|disqus|extra|feedback|foot|form|fulfillment|header|hidden|legal|menu|modal|nav|pager|pagination|placeholder|polic|popup|qa|question|reference|remark|return|review|rss|shoutbox|sidebar|slideshow|small|sponsor|toc|tweet|twitter|video|warranty', re.I),
     'divToPElementsRe': re.compile('<(a|blockquote|dl|div|img|ol|p|pre|table|ul)', re.I),
@@ -193,11 +193,12 @@ class Document:
                 metacontent = self.strip(elem.attrib.get('content'), self.domain)
                 if dedupe.get(prop[prop.find(':')+1:]) != metacontent:
                     try:
-                        meta = fragment_fromstring('<p class="econtextmax meta {}">{}</p>'.format(prop, re.sub("<.*?>", '', metacontent)))
+                        zlog.debug(u" *** prop={} ** content={}".format(prop, re.sub("<.*?>", '', metacontent)))
+                        meta = fragment_fromstring(u'<p class="econtextmax meta {}">{}</p>'.format(prop, re.sub("<.*?>", '', metacontent)))
                     except:
-                        zlog.debug("metacontent {}: {}".format(prop, metacontent))
+                        zlog.debug(u"metacontent {}: {}".format(prop, metacontent))
                     base.insert(0, meta)
-                    zlog.debug(" ** Found meta: {}".format(tounicode(meta)))
+                    zlog.debug(u" ** Found meta: {}".format(tounicode(meta)))
                 dedupe[prop[prop.find(':')+1:]] = metacontent
         return self
     
@@ -211,9 +212,9 @@ class Document:
             if elem.attrib.get('itemprop') in self.ITEMPROPS:
                 metacontent = elem.attrib.get('content', elem.text_content().strip())
                 if dedupe.get(elem.attrib.get('itemprop')) != metacontent:
-                    meta = fragment_fromstring('<p class="econtextmax itemprop {}">{}</p>'.format(elem.attrib.get('itemprop'), re.sub("<.*?>", '', metacontent)))
+                    meta = fragment_fromstring(u'<p class="econtextmax itemprop {}">{}</p>'.format(elem.attrib.get('itemprop'), re.sub("<.*?>", '', metacontent)))
                     base.insert(0, meta)
-                    zlog.debug(" ** Found microdata: {}".format(tounicode(meta)))
+                    zlog.debug(u" ** Found microdata: {}".format(tounicode(meta)))
                 dedupe[elem.attrib.get('itemprop')] = metacontent
         return self
     
