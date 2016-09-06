@@ -26,7 +26,7 @@ if sys.version < '3':
 REGEXES = {
     'unlikelyCandidatesRe': re.compile('ad-break|agegate|cart|combx|comment|community|disclaimer|disqus|extra|foot|header|hidden|legal|menu|modal|nav|pager|pagination|polic|popup|reference|remark|review|rss|shoutbox|sidebar|slideshow|sponsor|toc|tweet|twitter|video|warranty', re.I),
     'okMaybeItsACandidateRe': re.compile('econtextmax|and|article|body|column|content|main|shadow|product|feature|detail|spec|about', re.I),
-    'positiveRe': re.compile('econtextmax|and|article|body|column|content|main|shadow|product|feature|detail|spec|about|itemprop', re.I),
+    'positiveRe': re.compile('econtextmax|and|article|body|column|content|main|shadow|product|feature|detail|spec|about|itemprop|text', re.I),
     'negativeRe': re.compile('ad|ad-break|agegate|cart|citation|combx|comment|community|disclaimer|disqus|extra|feedback|foot|form|fulfillment|header|hidden|legal|menu|modal|nav|pager|pagination|placeholder|polic|popup|qa|question|reference|remark|return|review|rss|shoutbox|sidebar|slideshow|small|sponsor|toc|tweet|twitter|video|warranty', re.I),
     'divToPElementsRe': re.compile('<(a|blockquote|dl|div|img|ol|p|pre|table|ul)', re.I),
     'negativeStyles': re.compile('display:.?none|visibility:.?hidden', re.I)
