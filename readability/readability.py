@@ -331,7 +331,7 @@ class Document:
         sorted_candidates = sorted(list(candidates.values()), key=lambda x: x['content_score'], reverse=True)
         for candidate in sorted_candidates[:5]:
             elem = candidate['elem']
-            zlog.debug("Top 5 : %6.3f %s" % (candidate['content_score'], describe(elem)))
+            zlog.debug(u"Top 5 : %6.3f %s" % (candidate['content_score'], describe(elem)))
 
         if len(sorted_candidates) == 0:
             return None
@@ -393,7 +393,7 @@ class Document:
             candidate = candidates[elem]
             ld = self.get_link_density(elem)
             score = candidate['content_score']
-            zlog.debug("Candid: %6.3f %s link density %.3f -> %6.3f" % (score, describe(elem), ld, score * (1 - ld)))
+            zlog.debug(u"Candid: %6.3f %s link density %.3f -> %6.3f" % (score, describe(elem), ld, score * (1 - ld)))
             candidate['content_score'] *= (1 - ld)
 
         return candidates
@@ -402,7 +402,7 @@ class Document:
         weight = 0
         if e.get('class', None):
             if REGEXES['negativeRe'].search(e.get('class')):
-                zlog.debug("debiting score for negativeRe in class {}".format(describe(e)))
+                zlog.debug(u"debiting score for negativeRe in class {}".format(describe(e)))
                 weight -= 35 * len(REGEXES['negativeRe'].findall(e.get('class')))
 
             if REGEXES['positiveRe'].search(e.get('class')):
@@ -410,7 +410,7 @@ class Document:
 
         if e.get('id', None):
             if REGEXES['negativeRe'].search(e.get('id')):
-                zlog.debug("debiting score for negativeRe in id {}".format(describe(e)))
+                zlog.debug(u"debiting score for negativeRe in id {}".format(describe(e)))
                 weight -= 35 * len(REGEXES['negativeRe'].findall(e.get('id')))
 
             if REGEXES['positiveRe'].search(e.get('id')):
@@ -444,17 +444,17 @@ class Document:
             s = "%s %s" % (elem.get('class', ''), elem.get('id', ''))
             styles = elem.get('style', '')
             
-            zlog.debug("checking : {} - {} - {}".format(type(elem), s, styles))
+            zlog.debug(u"checking : {} - {} - {}".format(type(elem), s, styles))
             if len(s) < 2:
                 continue
             
             if REGEXES['unlikelyCandidatesRe'].search(s) and (not REGEXES['okMaybeItsACandidateRe'].search(s)) and elem.tag not in ['html', 'body']:
-                zlog.debug("Removing unlikely candidate - %s" % describe(elem))
+                zlog.debug(u"Removing unlikely candidate - %s" % describe(elem))
                 to_remove.append(elem)
                 continue
             
             if REGEXES['negativeStyles'].search(styles):
-                zlog.debug("Removing hidden content - %s" % describe(elem))
+                zlog.debug(u"Removing hidden content - %s" % describe(elem))
                 to_remove.append(elem)
                 continue
         
@@ -535,7 +535,7 @@ class Document:
             tag = el.tag
 
             if weight + content_score < 0:
-                zlog.debug("Cleaned %s with score %6.3f and weight %-3s" % (describe(el), content_score, weight, ))
+                zlog.debug(u"Cleaned %s with score %6.3f and weight %-3s" % (describe(el), content_score, weight, ))
                 el.drop_tree()
                 continue
             
@@ -630,12 +630,12 @@ class Document:
                     #self.debug(str(siblings))
                     if siblings and sum(siblings) > 1000:
                         to_remove = False
-                        zlog.debug("Allowing %s" % describe(el))
+                        zlog.debug(u"Allowing %s" % describe(el))
                         for desnode in self.tags(el, "table", "ul", "div"):
                             allowed[desnode] = True
 
                 if to_remove:
-                    zlog.debug("Cleaned %6.3f %s with weight %s cause it has %s." % (content_score, describe(el), weight, reason))
+                    zlog.debug(u"Cleaned %6.3f %s with weight %s cause it has %s." % (content_score, describe(el), weight, reason))
                     #print tounicode(el)
                     #self.debug("pname %s pweight %.3f" %(pname, pweight))
                     el.drop_tree()
