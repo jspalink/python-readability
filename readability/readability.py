@@ -197,6 +197,7 @@ class Document:
                         meta = fragment_fromstring(u'<p class="econtextmax meta {}">{}</p>'.format(prop, re.sub("<.*?>", '', metacontent)))
                     except:
                         #zlog.debug(u"metacontent {}: {}".format(prop, metacontent))
+                        pass
                     base.insert(0, meta)
                     #zlog.debug(u" ** Found meta: {}".format(tounicode(meta)))
                 dedupe[prop[prop.find(':')+1:]] = metacontent
@@ -332,10 +333,10 @@ class Document:
         for candidate in sorted_candidates[:5]:
             elem = candidate['elem']
             #zlog.debug(u"Top 5 : %6.3f %s" % (candidate['content_score'], describe(elem)))
-
+        
         if len(sorted_candidates) == 0:
             return None
-
+        
         best_candidate = sorted_candidates[0]
         return best_candidate
     
@@ -395,7 +396,7 @@ class Document:
             score = candidate['content_score']
             #zlog.debug(u"Candid: %6.3f %s link density %.3f -> %6.3f" % (score, describe(elem), ld, score * (1 - ld)))
             candidate['content_score'] *= (1 - ld)
-
+            
         return candidates
     
     def class_weight(self, e):
@@ -404,18 +405,18 @@ class Document:
             if REGEXES['negativeRe'].search(e.get('class')):
                 #zlog.debug(u"debiting score for negativeRe in class {}".format(describe(e)))
                 weight -= 35 * len(REGEXES['negativeRe'].findall(e.get('class')))
-
+                
             if REGEXES['positiveRe'].search(e.get('class')):
                 weight += 25 * len(REGEXES['positiveRe'].findall(e.get('class')))
-
+                
         if e.get('id', None):
             if REGEXES['negativeRe'].search(e.get('id')):
                 #zlog.debug(u"debiting score for negativeRe in id {}".format(describe(e)))
                 weight -= 35 * len(REGEXES['negativeRe'].findall(e.get('id')))
-
+                
             if REGEXES['positiveRe'].search(e.get('id')):
                 weight += 25 * len(REGEXES['positiveRe'].findall(e.get('id')))
-
+                
         return weight
     
     def score_node(self, elem):
@@ -457,7 +458,7 @@ class Document:
                 #zlog.debug(u"Removing hidden content - %s" % describe(elem))
                 to_remove.append(elem)
                 continue
-        
+            
         for elem in to_remove:
                 elem.drop_tree()
     
@@ -544,7 +545,7 @@ class Document:
                 for kind in ['p', 'img', 'li', 'a', 'embed', 'input']:
                     counts[kind] = len(el.findall('.//%s' % kind))
                 counts["li"] -= 100
-
+                
                 # Count the text length excluding any surrounding whitespace
                 content_length = text_length(el)
                 link_density = self.get_link_density(el)
@@ -633,7 +634,7 @@ class Document:
                         #zlog.debug(u"Allowing %s" % describe(el))
                         for desnode in self.tags(el, "table", "ul", "div"):
                             allowed[desnode] = True
-
+                
                 if to_remove:
                     #zlog.debug(u"Cleaned %6.3f %s with weight %s cause it has %s." % (content_score, describe(el), weight, reason))
                     #print tounicode(el)
