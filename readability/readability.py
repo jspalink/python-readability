@@ -17,19 +17,19 @@ from .htmls import get_body
 from .htmls import get_title
 from .htmls import shorten_title
 
-zlog = logging.getLogger('zenya')
+zlog = logging.getLogger('econtext.text')
 
 # Python 2.7 compatibility.
 if sys.version < '3':
     str = unicode
 
 REGEXES = {
-    'unlikelyCandidatesRe': re.compile('ad-break|agegate|cart|combx|comment|community|disclaimer|disqus|extra|foot|header|hidden|legal|menu|modal|nav|pager|pagination|polic|popup|reference|remark|review|rss|shoutbox|sidebar|slideshow|sponsor|toc|tweet|twitter|video|warranty', re.I),
-    'okMaybeItsACandidateRe': re.compile('econtextmax|and|article|body|column|content|main|shadow|product|feature|detail|spec|about', re.I),
-    'positiveRe': re.compile('econtextmax|and|article|body|column|content|main|shadow|product|feature|detail|spec|about|itemprop|text', re.I),
-    'negativeRe': re.compile('ad|ad-break|agegate|cart|citation|combx|comment|community|disclaimer|disqus|extra|feedback|foot|form|fulfillment|header|hidden|legal|menu|modal|nav|pager|pagination|placeholder|polic|popup|qa|question|reference|remark|return|review|rss|shoutbox|sidebar|slideshow|small|sponsor|toc|tweet|twitter|video|warranty', re.I),
-    'divToPElementsRe': re.compile('<(a|blockquote|dl|div|img|ol|p|pre|table|ul)', re.I),
-    'negativeStyles': re.compile('display:.?none|visibility:.?hidden', re.I)
+    'unlikelyCandidatesRe':   re.compile('ad-break|agegate|cart|combx|comment|community|disclaimer|disqus|extra|foot|header|hidden|legal|menu|modal|nav|pager|pagination|polic|popup|reference|remark|review|rss|shoutbox|sidebar|slideshow|sponsor|toc|tweet|twitter|video|warranty', re.I),
+    'okMaybeItsACandidateRe': re.compile('econtextmax|and|article|body|column|content|main|shadow|product|feature|detail|spec|about|text|story', re.I),
+    'positiveRe':             re.compile('econtextmax|and|article|body|column|content|main|shadow|product|feature|detail|spec|about|itemprop|text|story|story-content', re.I),
+    'negativeRe':             re.compile('ad|ad-break|agegate|cart|citation|combx|comment|community|disclaimer|disqus|extra|feedback|foot|form|fulfillment|header|hidden|item|legal|menu|modal|nav|pager|pagination|placeholder|polic|popup|qa|question|reference|remark|return|review|rss|shoutbox|sidebar|slideshow|small|sponsor|toc|tweet|twitter|video|warranty', re.I),
+    'divToPElementsRe':       re.compile('<(a|article|blockquote|dl|div|img|ol|p|pre|table|ul|main)', re.I),
+    'negativeStyles':         re.compile('display:.?none|visibility:.?hidden', re.I)
     #'replaceBrsRe': re.compile('(<br[^>]*>[ \n\r\t]*){2,}',re.I),
     #'replaceFontsRe': re.compile('<(\/?)font[^>]*>',re.I),
     #'trimRe': re.compile('^\s+|\s+$/'),
@@ -100,7 +100,7 @@ class Document:
     
     METAPROPS = ['description', 'title', 'keywords', 'og:title', 'og:description', 'twitter:description', 'twitter:title']
     ITEMPROPS = ['model', 'brand', 'description', 'name']
-    BADTAGS = ['nav', 'footer', 'header', 'aside']
+    BADTAGS = ['footer', 'header', 'nav', 'aside', 'script', 'style']
     
     def __init__(self, input, **options):
         """Generate the document
@@ -211,6 +211,9 @@ class Document:
             base = self.html.find(".//body")
         for elem in self.html.xpath(".//*[@itemprop]"):
             if elem.attrib.get('itemprop') in self.ITEMPROPS:
+                ancestors = set(a.tag for a in elem.iterancestors())
+                if len(ancestors.intersection(set(Document.BADTAGS))) > 0:
+                    continue
                 metacontent = elem.attrib.get('content', elem.text_content().strip())
                 if dedupe.get(elem.attrib.get('itemprop')) != metacontent:
                     meta = fragment_fromstring(u'<p class="econtextmax itemprop {}">{}</p>'.format(elem.attrib.get('itemprop'), re.sub("<.*?>", '', metacontent)))
@@ -231,7 +234,7 @@ class Document:
             while True:
                 self._html(True)
                 to_drop = []
-                for i in self.tags(self.html, 'script', 'style'):
+                for i in self.tags(self.html, *self.BADTAGS):
                     to_drop.append(i)
                 for i in to_drop:
                     i.drop_tree()
@@ -651,10 +654,10 @@ class Document:
             if el.getparent() is not None:
                 el.drop_tree()
         
-        for el in ([node] + [n for n in node.iter()]):
-            if not self.options.get('attributes', None):
-                #el.attrib = {} #FIXME:Checkout the effects of disabling this
-                pass
+        #for el in ([node] + [n for n in node.iter()]):
+        #    if not self.options.get('attributes', None):
+        #        #el.attrib = {} #FIXME:Checkout the effects of disabling this
+        #        pass
         
         self.html = node
         return self.get_clean_html()
