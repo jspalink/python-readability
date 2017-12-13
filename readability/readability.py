@@ -69,7 +69,7 @@ def describe(node, depth=1):
         name += '#' + node.get('id')
     if node.get('class', ''):
         name += '.' + node.get('class').replace(' ', '.')
-    name = "{} {}".format(node.getroottree().getpath(node), name)
+    name = "{} {}".format(node.getroottree().getpath(node), name.encode('utf8'))
     return name
 
 def to_int(x):
